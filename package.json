@@ -7,7 +7,9 @@
   },
   "scripts": {
     "install:ci": "bash scripts/install-ci.sh",
+    "predev": "node scripts/normalize-scenario-current-year.mjs",
     "dev": "next dev",
+    "prebuild": "node scripts/normalize-scenario-current-year.mjs",
     "build": "next build",
     "start": "next start",
     "test": "npm run build && node --test tests/*.test.mjs",
