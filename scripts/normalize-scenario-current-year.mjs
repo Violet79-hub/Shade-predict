@@ -46,6 +46,21 @@ updated = updated.replace(
   "<small>slows with maturity</small>",
 );
 
+// Allow the no-intervention scenario to become warmer when existing canopy
+// declines, without producing malformed labels such as “−-0.2°C”.
+updated = updated.replace(
+  "const climateCooling = (result.currentHeat - result.baselineHeat).toFixed(1);",
+  "const baselineHeatDelta = Number((result.baselineHeat - result.currentHeat).toFixed(1));\n  const baselineHeatDeltaLabel = `${baselineHeatDelta >= 0 ? \"+\" : \"−\"}${Math.abs(baselineHeatDelta).toFixed(1)}°C`;",
+);
+updated = updated.replace(
+  "sub={`−${climateCooling}°C from current`}",
+  "sub={`${baselineHeatDeltaLabel} from current`}",
+);
+updated = updated.replace(
+  "<strong>−{climateCooling}°C</strong>",
+  "<strong>{baselineHeatDeltaLabel}</strong>",
+);
+
 if (updated !== source) {
   await writeFile(file, updated, "utf8");
   console.log("Scenario source normalized to 2026 and enhanced lifecycle/urban-form models.");
