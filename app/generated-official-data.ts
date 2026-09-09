@@ -4,17 +4,28 @@
 
 export type OfficialAreaUrbanData = {
   analysisAreaM2: number;
+  observedTreeCanopy2014: number;
   observedTreeCanopy2018: number;
+  observedVegetation2014: number;
   observedVegetation2018: number;
+  observedUhi2014: number;
   observedUhi2018: number;
-  nonVegetatedSurfaceProxy: number;
+  hvi2018: number;
+  population2026: number | null;
+  canopyTrendPctPointPerYear: number;
+  estimatedTreeCanopy2026: number;
   treeInventory2025: {
     count: number;
-    youngShare: number;
+    unestablishedShare: number;
+    semiMatureShare: number;
     matureShare: number;
-    oldShare: number;
-    atRiskShare: number;
+    uleUnder10Share: number;
     averageDbhCm: number | null;
+  };
+  buildings2018: {
+    structureCount: number;
+    buildingCoverage: number;
+    averageHeightM: number | null;
   };
   buildings2023: {
     structureCount: number;
@@ -24,7 +35,47 @@ export type OfficialAreaUrbanData = {
   coverageNote: string;
 };
 
+export type EmpiricalSpeciesModel = {
+  id: string;
+  name: string;
+  scientificName: string | null;
+  sampleCount: number;
+  fitLevel: "species" | "citywide";
+  logIntercept: number;
+  logSlope: number;
+  rmseLog: number;
+  minObservedAge: number;
+  maxObservedAge: number;
+  observedCrownAreaMin: number;
+  observedCrownAreaMax: number;
+};
+
+export type EmpiricalHeatModel = {
+  n: number;
+  r2: number;
+  intercept: number;
+  treeCoverCoefficient: number;
+  buildingCoverageCoefficient: number;
+  averageHeightCoefficient: number;
+  trainingYear: 2018;
+  buildingYear: 2018;
+  note: string;
+};
+
+export const supportedAreas: string[] = [];
 export const officialUrbanData: Record<string, OfficialAreaUrbanData> = {};
+export const empiricalSpeciesModels: EmpiricalSpeciesModel[] = [];
+export const empiricalHeatModel: EmpiricalHeatModel = {
+  n: 0,
+  r2: 0,
+  intercept: 0,
+  treeCoverCoefficient: 0,
+  buildingCoverageCoefficient: 0,
+  averageHeightCoefficient: 0,
+  trainingYear: 2018,
+  buildingYear: 2018,
+  note: "Run npm run refresh:data before dev/build.",
+};
 
 export const officialDataProvenance = {
   generatedAt: null as string | null,
@@ -34,16 +85,45 @@ export const officialDataProvenance = {
     sourceYear: 2025,
     resourceId: "0f2a2180-2be0-5a58-a270-7538c35259e6",
   },
-  buildings: {
+  treeAllometry: {
+    organisation: "City of Melbourne",
+    dataset: "Tree canopies 2011 (Urban Forest)",
+    sourceYear: 2011,
+    resourceId: "87c0e94c-d7f9-4e92-ac4a-cf1905a3a903",
+  },
+  buildings2018: {
+    organisation: "City of Melbourne",
+    dataset: "2018 Building Footprints",
+    sourceYear: 2018,
+    resourceId: "9413d4b7-3b07-48f2-a7cd-0112fe3c3d96",
+  },
+  buildings2023: {
     organisation: "City of Melbourne",
     dataset: "2023 Building Footprints",
     sourceYear: 2023,
     resourceId: "5826dcef-6524-4099-bdf7-c33e1e372acd",
   },
-  urbanHeat: {
+  urbanHeat2014: {
     organisation: "Victorian Department of Transport and Planning",
-    dataset: "Cooling & Greening — Urban Heat (2018)(MMB)",
+    dataset: "Cooling & Greening — Urban Heat (2014) (Suburb)",
+    sourceYear: 2014,
+    layer: 50,
+  },
+  urbanHeat2018: {
+    organisation: "Victorian Department of Transport and Planning",
+    dataset: "Cooling & Greening — Urban Heat (2018) (Suburb)",
     sourceYear: 2018,
-    layer: 55,
+    layer: 54,
+  },
+  heatVulnerability: {
+    organisation: "Victorian Department of Transport and Planning",
+    dataset: "Heat Vulnerability Index (2018) (Suburb)",
+    sourceYear: 2018,
+    layer: 62,
+  },
+  population: {
+    organisation: "City of Melbourne",
+    dataset: "Population Forecasts by Small Area 2023-2043",
+    sourceYear: 2026,
   },
 } as const;
