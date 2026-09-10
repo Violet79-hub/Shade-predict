@@ -51,7 +51,7 @@ async function fetchOfficialDataset(datasetId) {
       try {
         console.log(`Fetching official City of Melbourne dataset: ${datasetId}`);
         const response = await originalFetch(url, {
-          headers: { "user-agent": "Shade2050-data-refresh/4.0" },
+          headers: { "user-agent": "Shade2050-data-refresh/4.1" },
         });
         if (!response.ok) {
           lastError = new Error(`${response.status} ${response.statusText} for ${url}`);
@@ -261,7 +261,6 @@ async function buildEmpiricalAllometryRows() {
       throw new Error(`Only ${polygons.length} usable official 2018 canopy polygons were parsed.`);
     }
 
-    // Spatial index: a tree point normally tests only polygons in its ~220 m cell.
     const cellSize = 0.002;
     const grid = new Map();
     polygons.forEach((polygon, index) => {
@@ -296,7 +295,6 @@ async function buildEmpiricalAllometryRows() {
         ) {
           continue;
         }
-        // If polygons overlap, use the smallest containing canopy footprint.
         if (selected === null || polygon.areaM2 < polygons[selected].areaM2) selected = polygonId;
       }
       if (selected === null) continue;
@@ -306,7 +304,6 @@ async function buildEmpiricalAllometryRows() {
 
     const training = [];
     for (const [polygonId, matches] of polygonTrees) {
-      // Avoid allocating a multi-tree canopy polygon using an arbitrary rule.
       if (matches.length !== 1) continue;
       const { tree, planted } = matches[0];
       if (planted < 2003 || planted > 2017) continue;
@@ -339,7 +336,7 @@ async function buildEmpiricalAllometryRows() {
       const key = row.common_nam.toLowerCase();
       speciesCounts.set(key, (speciesCounts.get(key) ?? 0) + 1);
     }
-    const speciesWith15 = [...speciesCounts.values()].filter((count) => count >= 15).length;
+    const speciesWith15 = [...speciesCounts.values()].filter((sampleCount) => sampleCount >= 15).length;
 
     console.log(
       `Created ${training.length.toLocaleString()} single-tree empirical crown samples from ${polygons.length.toLocaleString()} official 2018 canopy polygons; ${speciesWith15} species have >=15 samples.`,
@@ -387,8 +384,6 @@ globalThis.fetch = async (input, init) => {
   const requestUrl = new URL(url);
   const resourceId = requestUrl.searchParams.get("resource_id");
 
-  // The 2011 polygon layer cannot train a species/age model. Supply the
-  // empirically joined 2018 tree-level observations instead.
   if (resourceId === LEGACY_TREE_ALLOMETRY_RESOURCE) {
     const empiricalRows = await buildEmpiricalAllometryRows();
     return paginatedCkanResponse(empiricalRows, requestUrl);
@@ -406,13 +401,21 @@ globalThis.fetch = async (input, init) => {
 
 await import("./refresh-official-urban-data.mjs");
 
-// Correct provenance emitted by the legacy core script so the deployed site
-// states exactly how the empirical allometry rows were obtained.
+// The core script writes a generated source module. Keep that file for audit,
+// correct its provenance, then duplicate the completed snapshot into a *new*
+// build-only module name. Next/Turbopack therefore cannot retain the checked-in
+// empty placeholder module that existed before the prebuild refresh ran.
 const generatedFile = new URL("../app/generated-official-data.ts", import.meta.url);
+const runtimeFile = new URL("../app/generated-official-data.runtime.ts", import.meta.url);
 let generated = await readFile(generatedFile, "utf8");
-generated = generated
-  .replace(
-    '"dataset": "Tree canopies 2011 (Urban Forest)",\n    "sourceYear": 2011,\n    "resourceId": "87c0e94c-d7f9-4e92-ac4a-cf1905a3a903"',
-    '"dataset": "2018 public-realm canopy polygons spatially joined to 2025 tree inventory",\n    "sourceYear": 2018,\n    "resourceId": "tree-canopies-public-realm-2018-urban-forest"',
-  );
+generated = generated.replace(
+  '"dataset": "Tree canopies 2011 (Urban Forest)",\n    "sourceYear": 2011,\n    "resourceId": "87c0e94c-d7f9-4e92-ac4a-cf1905a3a903"',
+  '"dataset": "2018 public-realm canopy polygons spatially joined to 2025 tree inventory",\n    "sourceYear": 2018,\n    "resourceId": "tree-canopies-public-realm-2018-urban-forest"',
+);
 await writeFile(generatedFile, generated, "utf8");
+await writeFile(runtimeFile, generated, "utf8");
+
+if (!generated.includes('"Carlton"')) {
+  throw new Error("Generated official-data snapshot does not contain Carlton; refusing build.");
+}
+console.log("Verified build-only official-data runtime module contains Carlton and all generated empirical outputs.");
