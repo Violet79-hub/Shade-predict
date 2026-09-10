@@ -12,7 +12,7 @@ import {
   supportedAreas,
   type EmpiricalSpeciesModel,
   type OfficialAreaUrbanData,
-} from "./generated-official-data";
+} from "./generated-official-data.runtime";
 
 export const areas = supportedAreas;
 export { formatArea, species, streetCorridorsByArea, officialDataProvenance, empiricalHeatModel };
@@ -131,25 +131,18 @@ export function calculateScenario(
     official.analysisAreaM2 * Math.min(1, Math.max(0.06, areaScale)),
   );
 
-  // Existing canopy is projected from the observed 2014–2018 suburb trend.
-  // No invented age-cohort growth or mortality constants are used here.
   const yearsFrom2026 = year - 2026;
   const baseline = Math.max(
     0,
     Math.min(100, current + official.canopyTrendPctPointPerYear * yearsFrom2026),
   );
 
-  // New-tree crown area is predicted from the empirical City of Melbourne 2011
-  // age/canopy-diameter fit for the selected species (or citywide fallback).
   const plantedTreeAge = Math.max(1, yearsFrom2026 + 1);
   const perTree = predictCrownArea(model, plantedTreeAge);
   const addedArea = Math.round(perTree * count);
   const plantingGain = Math.max(0, Math.min(100 - baseline, (addedArea / analysisArea) * 100));
   const withPlanting = baseline + plantingGain;
 
-  // UHI is predicted by the OLS model fitted at build time from official 2018
-  // UHI/tree-cover + 2018 building footprints. Future scenarios hold the latest
-  // verified (2023) building form constant rather than inventing 2035/2050 buildings.
   const buildingCoverage = official.buildings2023.buildingCoverage;
   const averageHeight = official.buildings2023.averageHeightM ?? 0;
   const currentHeat = predictUhi(current, buildingCoverage, averageHeight);
