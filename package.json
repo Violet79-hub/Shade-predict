@@ -7,7 +7,7 @@
   },
   "scripts": {
     "install:ci": "bash scripts/install-ci.sh",
-    "refresh:data": "node scripts/refresh-official-data-entry.mjs",
+    "refresh:data": "node scripts/run-official-refresh.mjs",
     "predev": "npm run refresh:data && node scripts/normalize-scenario-current-year.mjs",
     "dev": "next dev",
     "prebuild": "npm run refresh:data && node scripts/normalize-scenario-current-year.mjs",
