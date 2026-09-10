@@ -51,7 +51,7 @@ async function fetchOfficialDataset(datasetId) {
       try {
         console.log(`Fetching official City of Melbourne dataset: ${datasetId}`);
         const response = await originalFetch(url, {
-          headers: { "user-agent": "Shade2050-data-refresh/4.1" },
+          headers: { "user-agent": "Shade2050-data-refresh/4.2" },
         });
         if (!response.ok) {
           lastError = new Error(`${response.status} ${response.statusText} for ${url}`);
@@ -401,21 +401,57 @@ globalThis.fetch = async (input, init) => {
 
 await import("./refresh-official-urban-data.mjs");
 
-// The core script writes a generated source module. Keep that file for audit,
-// correct its provenance, then duplicate the completed snapshot into a *new*
-// build-only module name. Next/Turbopack therefore cannot retain the checked-in
-// empty placeholder module that existed before the prebuild refresh ran.
+// The official ArcGIS locality values are uppercase (for example CARLTON and
+// NORTH MELBOURNE). The UI uses one canonical display-name vocabulary. Normalize
+// the completed generated module here so both supportedAreas and officialUrbanData
+// use exactly the same keys as the application.
+const CANONICAL_LOCALITIES = new Map([
+  ["CARLTON", "Carlton"],
+  ["CARLTON NORTH", "Carlton North"],
+  ["DOCKLANDS", "Docklands"],
+  ["EAST MELBOURNE", "East Melbourne"],
+  ["KENSINGTON", "Kensington"],
+  ["MELBOURNE", "Melbourne CBD"],
+  ["NORTH MELBOURNE", "North Melbourne"],
+  ["PARKVILLE", "Parkville"],
+  ["SOUTHBANK", "Southbank"],
+  ["SOUTH WHARF", "South Wharf"],
+  ["WEST MELBOURNE", "West Melbourne"],
+  ["FITZROY", "Fitzroy"],
+  ["PRINCES HILL", "Princes Hill"],
+]);
+
+const EXPECTED_AREAS = [...CANONICAL_LOCALITIES.values()];
 const generatedFile = new URL("../app/generated-official-data.ts", import.meta.url);
 const runtimeFile = new URL("../app/generated-official-data.runtime.ts", import.meta.url);
 let generated = await readFile(generatedFile, "utf8");
+
+for (const [officialName, canonicalName] of CANONICAL_LOCALITIES) {
+  generated = generated.replaceAll(`"${officialName}"`, `"${canonicalName}"`);
+}
+
 generated = generated.replace(
   '"dataset": "Tree canopies 2011 (Urban Forest)",\n    "sourceYear": 2011,\n    "resourceId": "87c0e94c-d7f9-4e92-ac4a-cf1905a3a903"',
   '"dataset": "2018 public-realm canopy polygons spatially joined to 2025 tree inventory",\n    "sourceYear": 2018,\n    "resourceId": "tree-canopies-public-realm-2018-urban-forest"',
 );
+
+const missingAreas = EXPECTED_AREAS.filter(
+  (areaName) => !generated.includes(`"${areaName}"`),
+);
+if (missingAreas.length) {
+  throw new Error(
+    `Generated official-data snapshot is missing canonical areas: ${missingAreas.join(", ")}. Refusing Netlify build.`,
+  );
+}
+if (!generated.includes('"id": "citywide"')) {
+  throw new Error("Generated official-data snapshot is missing the empirical citywide tree model.");
+}
+if (!generated.includes("export const empiricalHeatModel")) {
+  throw new Error("Generated official-data snapshot is missing the empirical heat model.");
+}
+
 await writeFile(generatedFile, generated, "utf8");
 await writeFile(runtimeFile, generated, "utf8");
-
-if (!generated.includes('"Carlton"')) {
-  throw new Error("Generated official-data snapshot does not contain Carlton; refusing build.");
-}
-console.log("Verified build-only official-data runtime module contains Carlton and all generated empirical outputs.");
+console.log(
+  `Verified build-only runtime snapshot: ${EXPECTED_AREAS.length} canonical areas + empirical tree models + empirical heat model.`,
+);
