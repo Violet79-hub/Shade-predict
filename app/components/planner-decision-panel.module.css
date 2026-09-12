@@ -56,6 +56,8 @@
 .statusRow, .warningRow, .pendingRow { display: flex; gap: 8px; align-items: flex-start; padding: 9px 0; font-size: 13px; line-height: 1.4; border-top: 1px solid #edf2ef; }
 .statusRow { color: #315f4e; }
 .warningRow, .pendingRow { color: #875b34; }
+.evidenceCard:has(.pendingRow) { display: none; }
+.evidenceGrid:has(.pendingRow) { grid-template-columns: 1fr; }
 .sourceNote { background: #f2f5f3; border-radius: 12px; padding: 12px; }
 @media (max-width: 1000px) {
   .scenarioGrid, .metricGrid { grid-template-columns: repeat(2, minmax(0,1fr)); }
