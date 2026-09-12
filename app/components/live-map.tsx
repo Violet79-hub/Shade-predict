@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import { BadgeCheck, Layers3, LocateFixed, MapPin, Trees } from "lucide-react";
 import { baseByArea } from "../official-data-model";
 
@@ -99,6 +99,7 @@ export function LiveMap({
   streetId,
   year,
   speciesName,
+  onAreaChange,
 }: {
   area: string;
   count: number;
@@ -106,7 +107,9 @@ export function LiveMap({
   streetId: string;
   year: 2030 | 2035 | 2040 | 2045 | 2050;
   speciesName: string;
+  onAreaChange: (area: string) => void;
 }) {
+  const [zoom, setZoom] = useState(1);
   const seed = areaSeed(area);
   const selectedDistrict = districts.find((district) => district.name === area) ?? districts[0];
   const observedCanopy = baseByArea[area]?.current ?? 0;
@@ -130,25 +133,42 @@ export function LiveMap({
         </defs>
         <rect width="100" height="100" fill="#f7f8f5" />
         <rect width="100" height="100" fill="url(#city-grid)" />
-        <path className="map-water" d="M0 70C14 65 23 68 37 72C52 77 64 71 78 74C89 76 95 82 100 86V100H0Z" />
-        <path className="map-arterial" d="M-5 49C18 44 30 43 46 38S77 24 105 21" />
-        <path className="map-arterial fine" d="M18-5C25 22 26 42 22 105M53-5C54 18 52 45 58 105M86-5C82 21 86 53 91 105" />
-        {districts.map((district) => {
-          const canopy = baseByArea[district.name]?.current ?? 8;
-          const selected = district.name === selectedDistrict.name;
-          return (
-            <g key={district.name} className={selected ? "district selected" : "district"}>
-              <polygon points={pointsAttribute(district.points)} className={`district-fill ${shadeFor(canopy)}`} />
-              <polygon points={pointsAttribute(district.points)} className="district-border" />
-              <text x={district.label.x} y={district.label.y} className="district-label">{district.name === "Melbourne CBD" ? "Melbourne (CBD)" : district.name}</text>
-            </g>
-          );
-        })}
-        {existingMarkers.map((point, index) => <circle key={`existing-${index}`} cx={point.x} cy={point.y} r=".25" className="map-existing-tree" />)}
-        {plannedMarkers.map((point, index) => <TreeMarker key={`planned-${index}`} point={point} index={index} seed={seed} />)}
+        <g className="map-viewport" transform={`translate(50 50) scale(${zoom}) translate(-50 -50)`}>
+          <path className="map-water" d="M0 70C14 65 23 68 37 72C52 77 64 71 78 74C89 76 95 82 100 86V100H0Z" />
+          <path className="map-arterial" d="M-5 49C18 44 30 43 46 38S77 24 105 21" />
+          <path className="map-arterial fine" d="M18-5C25 22 26 42 22 105M53-5C54 18 52 45 58 105M86-5C82 21 86 53 91 105" />
+          {districts.map((district) => {
+            const canopy = baseByArea[district.name]?.current ?? 8;
+            const selected = district.name === selectedDistrict.name;
+            return (
+              <g
+                key={district.name}
+                className={selected ? "district selected" : "district"}
+                role="button"
+                tabIndex={0}
+                aria-label={`Select ${district.name}`}
+                onClick={() => onAreaChange(district.name)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") onAreaChange(district.name);
+                }}
+              >
+                <title>{district.name} · {canopy}% canopy</title>
+                <polygon points={pointsAttribute(district.points)} className={`district-fill ${shadeFor(canopy)}`} />
+                <polygon points={pointsAttribute(district.points)} className="district-border" />
+                <text x={district.label.x} y={district.label.y} className="district-label">{district.name === "Melbourne CBD" ? "Melbourne (CBD)" : district.name}</text>
+              </g>
+            );
+          })}
+          {existingMarkers.map((point, index) => <circle key={`existing-${index}`} cx={point.x} cy={point.y} r=".25" className="map-existing-tree" />)}
+          {plannedMarkers.map((point, index) => <TreeMarker key={`planned-${index}`} point={point} index={index} seed={seed} />)}
+        </g>
       </svg>
 
-      <div className="map-zoom-control" aria-hidden="true"><button>+</button><button>−</button><button><LocateFixed size={16} /></button></div>
+      <div className="map-zoom-control" aria-label="Map zoom controls">
+        <button aria-label="Zoom in" onClick={() => setZoom((value) => Math.min(1.8, value + .2))}>+</button>
+        <button aria-label="Zoom out" onClick={() => setZoom((value) => Math.max(1, value - .2))}>−</button>
+        <button aria-label="Reset map view" onClick={() => setZoom(1)}><LocateFixed size={16} /></button>
+      </div>
       <div className="live-map-legend">
         <div className="legend-title"><Layers3 size={15} /> Tree canopy cover · 2026</div>
         <small>% of analysis area</small>

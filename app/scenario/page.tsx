@@ -1510,6 +1510,7 @@ export default function Home() {
           streetId={activeStreet?.id ?? streetId}
           year={year}
           speciesName={species.find((item) => item.id === speciesId)?.name ?? "Selected species"}
+          onAreaChange={chooseArea}
         />
         <div className="workspace-toolbar" aria-label="Scenario workflow">
           <div className="workspace-heading">
