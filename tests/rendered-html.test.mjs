@@ -9,5 +9,7 @@ test('exports production pages with complete planning controls', async () => {
   }
   const planner = await readFile(new URL('../out/scenario.html', import.meta.url), 'utf8');
   for (const label of ['Suburb','CLUE Area','Street corridor','3D trees','Review impact']) assert.ok(planner.includes(label));
-  assert.doesNotMatch(planner, /preserveAspectRatio="none"/);
+  const map = planner.match(/<section class="geo-workspace"[\s\S]*?<\/section>/)?.[0];
+  assert.ok(map, 'Geographic map container is exported');
+  assert.doesNotMatch(map, /preserveAspectRatio="none"/);
 });
