@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
+import 'maplibre-gl/dist/maplibre-gl.css';
+import './workspace.css';
 
 export default function ScenarioLayout({
   children,

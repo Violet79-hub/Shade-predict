@@ -22,6 +22,7 @@ import {
 
 export { areas, formatArea, priorityAreas, species, streetCorridorsByArea, officialDataProvenance, empiricalHeatModel };
 export type { Species };
+export { planningGridByArea };
 
 export type PlanningHorizon = 2030 | 2035 | 2040 | 2045 | 2050;
 
@@ -178,7 +179,7 @@ export function calculateScenario(
 
   const matureEvidence =
     empiricalMatureCrownByModelId[model.id] ?? empiricalMatureCrownByModelId.citywide ?? null;
-  const areaValidation = modelValidation.byArea?.[areaName] ?? null;
+  const areaValidation = Object.entries(modelValidation.byArea).find(([name]) => name === areaName)?.[1] ?? null;
 
   return {
     current: Number(current.toFixed(1)),

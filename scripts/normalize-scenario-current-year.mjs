@@ -23,9 +23,7 @@ updated = updated.replaceAll(
 );
 updated = updated.replaceAll("[2035, 2050]", "[2030, 2035, 2040, 2045, 2050]");
 
-// Disable modes that still depend on unverified/demo street or CLUE capacity data.
-updated = updated.replace('<TabsTrigger value="clue">CLUE Area</TabsTrigger>', '');
-updated = updated.replace('<TabsTrigger value="street">Street corridor</TabsTrigger>', '');
+// Preserve planning scales. The UI labels unverified street/CLUE assumptions.
 
 // Keep model descriptions aligned with the actual empirical training pipeline.
 updated = updated.replace(

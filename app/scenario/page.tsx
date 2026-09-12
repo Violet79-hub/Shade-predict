@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -256,6 +256,8 @@ function ScenarioControls({
         >
           <TabsList className="segmented" aria-label="Planning scale">
             <TabsTrigger value="suburb">Suburb</TabsTrigger>
+            <TabsTrigger value="clue">CLUE Area</TabsTrigger>
+            <TabsTrigger value="street">Street corridor</TabsTrigger>
           </TabsList>
           <TabsContent value="suburb">
             <label className="field-label" htmlFor="area-select">
@@ -296,7 +298,7 @@ function ScenarioControls({
               </SelectContent>
             </Select>
             <div className="inline-note">
-              Central-city planning unit for precinct-level decisions.
+              Precinct selector linked to suburb-scale estimates, not a separate CLUE forecast.
             </div>
           </TabsContent>
           <TabsContent value="street">
@@ -319,7 +321,7 @@ function ScenarioControls({
             <label className="field-label" htmlFor="street-select">
               Street section
             </label>
-            <Select value={activeStreet?.id} onValueChange={setStreetId}>
+            <Select value={activeStreet?.id ?? ""} onValueChange={setStreetId} disabled={!streetOptions.length}>
               <SelectTrigger id="street-select" className="site-select">
                 <Route size={16} />
                 <SelectValue />
@@ -338,13 +340,14 @@ function ScenarioControls({
                   <strong>{activeStreet.length} m</strong>corridor length
                 </span>
                 <span>
-                  <strong>{activeStreet.capacity}</strong>available sites
+                  <strong>{activeStreet.capacity}</strong>illustrative capacity
                 </span>
                 <span>
                   <strong>{activeStreet.currentCanopy}%</strong>current canopy
                 </span>
               </div>
             )}
+            <div className="inline-note">{activeStreet ? "Street length, capacity and canopy are illustrative assumptions, not surveyed street measurements." : "No street scenario is available for this suburb. Select another suburb or use Suburb planning."}</div>
           </TabsContent>
         </Tabs>
       </div>
@@ -428,7 +431,7 @@ function ScenarioControls({
             </small>
           </div>
         </div>
-        <Button className="run-button" onClick={run} disabled={running}>
+        <Button className="run-button" onClick={run} disabled={running || (selectionMode === "street" && !activeStreet)}>
           {running ? (
             <>
               <LoaderCircle className="spin" /> Forecasting growth…
@@ -1323,7 +1326,9 @@ export default function Home() {
   const [selectionMode, setSelectionMode] = useState<SelectionMode>("suburb"),
     [clueAreaId, setClueAreaId] = useState("city-north"),
     [streetId, setStreetId] = useState(streetCorridorsByArea.Carlton[0].id);
-  const [savedPlans, setSavedPlans] = useState<SavedScenario[]>(() => {
+  const [savedPlans, setSavedPlans] = useState<SavedScenario[]>([]);
+  useEffect(() => {
+    function readSavedPlans(): SavedScenario[] {
     if (typeof window === "undefined") return [];
     try {
       const stored = window.localStorage.getItem("shade2050-saved-scenarios");
@@ -1343,8 +1348,12 @@ export default function Home() {
     } catch {
       return [];
     }
-  });
+    }
+    const frame = requestAnimationFrame(() => setSavedPlans(readSavedPlans()));
+    return () => cancelAnimationFrame(frame);
+  }, []);
   const [justSaved, setJustSaved] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const [activeWorkspacePanel, setActiveWorkspacePanel] = useState<
     "plan" | "impact"
   >("plan");
@@ -1385,14 +1394,17 @@ export default function Home() {
       ? lastStreet.name
       : lastRun.area;
   const persistPlans = (plans: SavedScenario[]) => {
-    setSavedPlans(plans);
     try {
       window.localStorage.setItem(
         "shade2050-saved-scenarios",
         JSON.stringify(plans),
       );
+      setSavedPlans(plans);
+      setSaveError("");
+      return true;
     } catch {
-      /* Saving remains optional in restricted browsers. */
+      setSaveError("Your browser could not save this change. Check storage permissions or free some space, then try again.");
+      return false;
     }
   };
   const chooseArea = (name: string) => {
@@ -1466,8 +1478,7 @@ export default function Home() {
       cooling: result.heatReduction,
       areaScale: lastRun.areaScale,
     };
-    persistPlans([plan, ...savedPlans]);
-    setJustSaved(true);
+    setJustSaved(persistPlans([plan, ...savedPlans]));
     window.setTimeout(() => setJustSaved(false), 1800);
   };
   const loadScenario = (plan: SavedScenario) => {
@@ -1502,7 +1513,7 @@ export default function Home() {
   return (
     <main className="app-shell scenario-page">
       <SiteHeader active="scenario" />
-      <div className="workspace" id="scenario">
+      <div className="workspace" id="scenario" data-view={activeWorkspacePanel}>
         <LiveMap
           area={area}
           count={count}
@@ -1510,12 +1521,12 @@ export default function Home() {
           streetId={activeStreet?.id ?? streetId}
           year={year}
           speciesName={species.find((item) => item.id === speciesId)?.name ?? "Selected species"}
-          onAreaChange={chooseArea}
+          onAreaChange={(name) => { setSelectionMode("suburb"); chooseArea(name); }}
         />
         <div className="workspace-toolbar" aria-label="Scenario workflow">
           <div className="workspace-heading">
-            <small>SHADE 2050 · PLANNING WORKSPACE</small>
-            <strong>{area}</strong>
+            <small>MELBOURNE / SCENARIO PLANNER</small>
+            <strong>Where should the next trees go?</strong>
           </div>
           <div className="workspace-mode-switch">
             <button
@@ -1538,7 +1549,7 @@ export default function Home() {
           </div>
         </div>
 
-        <div className={`workspace-drawer plan-drawer ${activeWorkspacePanel === "plan" ? "active" : ""}`}>
+        <div className={`workspace-drawer plan-drawer ${activeWorkspacePanel === "plan" ? "active" : ""}`} hidden={activeWorkspacePanel !== "plan"}>
           <ScenarioControls
             area={area}
             setArea={chooseArea}
@@ -1559,8 +1570,9 @@ export default function Home() {
           />
         </div>
 
-        <div className={`workspace-drawer impact-drawer ${activeWorkspacePanel === "impact" ? "active" : ""}`}>
+        <div className={`workspace-drawer impact-drawer ${activeWorkspacePanel === "impact" ? "active" : ""}`} hidden={activeWorkspacePanel !== "impact"}>
         <section className="results-panel" id="results">
+          {(area !== lastRun.area || count !== lastRun.count || speciesId !== lastRun.speciesId || year !== lastRun.year || selectionMode !== lastRun.selectionMode || streetId !== lastRun.streetId) && <div className="scenario-stale" role="status">Inputs have changed. These results belong to your last run.<Button onClick={run} disabled={running || (selectionMode === "street" && !activeStreet)}>Update results</Button></div>}
           <div className="results-header">
             <div className="results-title">
               <span className="results-tree">
@@ -1587,7 +1599,7 @@ export default function Home() {
                       CORRIDOR<strong>{lastStreet.length} m</strong>
                     </span>
                     <span>
-                      SITE CAPACITY<strong>{lastStreet.capacity} trees</strong>
+                      ASSUMED CAPACITY<strong>{lastStreet.capacity} trees</strong>
                     </span>
                   </>
                 ) : (
@@ -1606,6 +1618,7 @@ export default function Home() {
                 )}
               </div>
               <div className="scenario-save-actions">
+                {saveError && <p role="alert">{saveError}</p>}
                 <Button
                   className={`save-scenario-button ${justSaved ? "saved" : ""}`}
                   onClick={saveScenario}
@@ -1644,6 +1657,8 @@ export default function Home() {
               </TabsTrigger>
               <TabsTrigger value="details">Details</TabsTrigger>
               <TabsTrigger value="street-view">Street view</TabsTrigger>
+              <TabsTrigger value="cost">Scenarios & budget</TabsTrigger>
+              <TabsTrigger value="evidence">Validation & planting sites</TabsTrigger>
             </TabsList>
             <TabsContent value="overview">
               <OverviewPanel result={result} year={lastRun.year} />
@@ -1689,7 +1704,7 @@ export default function Home() {
                   </h3>
                   <p>
                     {lastRun.selectionMode === "street" && lastStreet
-                      ? `${lastStreet.capacity} feasible planting sites across ${lastStreet.length} metres.`
+                      ? `Illustrative assumption: ${lastStreet.capacity} trees across ${lastStreet.length} metres. Requires site verification.`
                       : `${activeTree.name} is evaluated against the ${activeTree.range} observed crown range.`}
                   </p>
                 </div>
@@ -1710,17 +1725,21 @@ export default function Home() {
                 area={resultLabel}
               />
             </TabsContent>
-          </Tabs>
+            <TabsContent value="cost">
           <PlannerDecisionPanel
             area={lastRun.area}
             count={lastRun.count}
             year={lastRun.year}
             result={result}
           />
+            </TabsContent>
+            <TabsContent value="evidence">
           <PlannerValidationPanel
             area={lastRun.area}
             result={result}
           />
+            </TabsContent>
+          </Tabs>
         </section>
         </div>
       </div>

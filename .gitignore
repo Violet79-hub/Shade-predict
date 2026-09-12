@@ -40,4 +40,6 @@ next-env.d.ts
 /.sites-runtime/
 /outputs/
 /work/
+*.tsbuildinfo
+/app/generated-official-data.runtime.ts
 *.tar.gz
