@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -56,6 +56,8 @@ import {
 } from "@/components/ui/sheet";
 import { SiteHeader } from "@/app/components/site-header";
 import { LiveMap, SelectionMode } from "@/app/components/live-map";
+import { PlannerDecisionPanel } from "../components/planner-decision-panel";
+import { PlannerValidationPanel } from "../components/planner-validation-panel";
 import {
   areas,
   baseByArea,
@@ -64,7 +66,7 @@ import {
   makeGrowthData,
   species,
   streetCorridorsByArea,
-} from "../data";
+} from "../planner-model";
 
 const clueAreas = [
   { id: "city-north", name: "City North", area: "Carlton" },
@@ -83,7 +85,7 @@ type SavedScenario = {
   streetId: string;
   speciesId: string;
   count: number;
-  year: 2035 | 2050;
+  year: 2030 | 2035 | 2040 | 2045 | 2050;
   canopy: number;
   heat: number;
   cooling: number;
@@ -226,8 +228,8 @@ function ScenarioControls({
   setSpeciesId: (v: string) => void;
   count: number;
   setCount: (v: number) => void;
-  year: 2035 | 2050;
-  setYear: (v: 2035 | 2050) => void;
+  year: 2030 | 2035 | 2040 | 2045 | 2050;
+  setYear: (v: 2030 | 2035 | 2040 | 2045 | 2050) => void;
   running: boolean;
   run: () => void;
 }) {
@@ -254,8 +256,6 @@ function ScenarioControls({
         >
           <TabsList className="segmented" aria-label="Planning scale">
             <TabsTrigger value="suburb">Suburb</TabsTrigger>
-            <TabsTrigger value="clue">CLUE Area</TabsTrigger>
-            <TabsTrigger value="street">Street corridor</TabsTrigger>
           </TabsList>
           <TabsContent value="suburb">
             <label className="field-label" htmlFor="area-select">
@@ -405,10 +405,10 @@ function ScenarioControls({
         </div>
         <label className="field-label">Target year</label>
         <div className="year-toggle" role="group" aria-label="Target year">
-          {[2035, 2050].map((item) => (
+          {[2030, 2035, 2040, 2045, 2050].map((item) => (
             <button
               key={item}
-              onClick={() => setYear(item as 2035 | 2050)}
+              onClick={() => setYear(item as 2030 | 2035 | 2040 | 2045 | 2050)}
               className={year === item ? "active" : ""}
             >
               {item}
@@ -455,7 +455,7 @@ function OverviewPanel({
   year,
 }: {
   result: ReturnType<typeof calculateScenario>;
-  year: 2035 | 2050;
+  year: 2030 | 2035 | 2040 | 2045 | 2050;
 }) {
   return (
     <div className="overview-content">
@@ -472,7 +472,7 @@ function OverviewPanel({
           </div>
           <div className="triple-cards">
             <ComparisonCard
-              label="Current · 2024"
+              label="Current · 2026"
               value={`${result.current}%`}
               sub={formatArea(result.currentArea)}
               density={9}
@@ -500,21 +500,21 @@ function OverviewPanel({
             </span>
             <div>
               <h3>Urban heat</h3>
-              <p>Average surface temperature</p>
+              <p>Urban heat-island intensity</p>
             </div>
           </div>
           <div className="triple-cards">
             <ComparisonCard
-              label="Current · 2024"
+              label="Current · 2026"
               value={`${result.currentHeat}°`}
-              sub="Observed summer peak"
+              sub="2026 model baseline · official-data fit"
               density={0}
               type="heat"
             />
             <ComparisonCard
               label={`Baseline · ${year}`}
               value={`${result.baselineHeat}°`}
-              sub="Climate-adjusted"
+              sub="Empirical no-intervention projection"
               density={0}
               type="heat"
             />
@@ -555,7 +555,7 @@ function OverviewPanel({
           <MetricPill
             icon={<ThermometerSun size={20} />}
             value={`−${result.heatReduction}°C`}
-            label="surface temperature"
+            label="UHI intensity"
             tone="red"
           />
           <MetricPill
@@ -576,15 +576,15 @@ function CanopyChangePanel({
   area,
 }: {
   result: ReturnType<typeof calculateScenario>;
-  year: 2035 | 2050;
+  year: 2030 | 2035 | 2040 | 2045 | 2050;
   area: string;
 }) {
-  const years = [2024, 2030, 2035, 2040, 2045, 2050].filter(
+  const years = [2026, 2030, 2035, 2040, 2045, 2050].filter(
     (item) => item <= year,
   );
   if (years[years.length - 1] !== year) years.push(year);
   const trajectory = years.map((item) => {
-    const progress = (item - 2024) / (year - 2024);
+    const progress = (item - 2026) / (year - 2026);
     return {
       year: item,
       baseline: Number(
@@ -625,7 +625,7 @@ function CanopyChangePanel({
       </div>
       <div className="canopy-pathway">
         <div>
-          <small>CURRENT · 2024</small>
+          <small>CURRENT · 2026</small>
           <strong>{result.current}%</strong>
           <span>{formatArea(result.currentArea)}</span>
         </div>
@@ -734,9 +734,9 @@ function CanopyChangePanel({
         <aside className="canopy-breakdown">
           <h4>What changes by {year}</h4>
           <div>
-            <small>Natural canopy growth</small>
+            <small>Observed-trend canopy change</small>
             <strong>+{(result.baseline - result.current).toFixed(1)}%</strong>
-            <span>without new planting</span>
+            <span>2014–2018 official trend extrapolated</span>
           </div>
           <div className="highlight">
             <small>Planting contribution</small>
@@ -773,7 +773,7 @@ function ModelBPanel({
 }: {
   tree: (typeof species)[number];
   count: number;
-  year: 2035 | 2050;
+  year: 2030 | 2035 | 2040 | 2045 | 2050;
   result: ReturnType<typeof calculateScenario>;
   area: string;
 }) {
@@ -793,8 +793,8 @@ function ModelBPanel({
           <div className="eyebrow">TREE-LEVEL FORECAST ENGINE</div>
           <h3>Model B · Crown growth projection</h3>
           <p>
-            Recursive simulation estimates how each planted tree grows, then
-            aggregates its contribution to the area-level canopy scenario.
+            Empirical crown-age modelling uses 2025 City of Melbourne tree inventory records spatially joined to official 2018 public-realm canopy polygons.
+            Single-tree matches with reliable planting years form species-level fits; otherwise a citywide empirical fallback is used.
           </p>
         </div>
         <div className="model-status">
@@ -1027,10 +1027,11 @@ function HeatModelPanel({
   area,
 }: {
   result: ReturnType<typeof calculateScenario>;
-  year: 2035 | 2050;
+  year: 2030 | 2035 | 2040 | 2045 | 2050;
   area: string;
 }) {
-  const climateCooling = (result.currentHeat - result.baselineHeat).toFixed(1);
+  const baselineHeatDelta = Number((result.baselineHeat - result.currentHeat).toFixed(2));
+  const baselineHeatDeltaLabel = `${baselineHeatDelta >= 0 ? "+" : "−"}${Math.abs(baselineHeatDelta).toFixed(2)}°C`;
   const totalCooling = (result.currentHeat - result.plantingHeat).toFixed(1);
   return (
     <div className="heat-model-panel">
@@ -1042,8 +1043,7 @@ function HeatModelPanel({
           <div className="heat-eyebrow">URBAN HEAT FORECAST ENGINE</div>
           <h3>Heat Prediction Model</h3>
           <p>
-            Translates projected canopy change into area-level surface
-            temperature outcomes for {area}.
+            Predicts UHI intensity from tree cover and official building-form variables using an OLS model fitted on 2018 observations.
           </p>
         </div>
         <span className="heat-model-status">
@@ -1053,9 +1053,9 @@ function HeatModelPanel({
       </div>
       <div className="heat-pathway">
         <div>
-          <small>MODEL INPUT</small>
+          <small>MODEL INPUTS</small>
           <strong>+{result.canopyGain}% canopy</strong>
-          <span>From the planting scenario</span>
+          <span>Empirical tree cover + official building form</span>
         </div>
         <ArrowRight size={18} />
         <div>
@@ -1076,22 +1076,22 @@ function HeatModelPanel({
             <ThermometerSun size={17} />
           </span>
           <div>
-            <h3>Surface temperature comparison</h3>
+            <h3>Urban heat-island comparison</h3>
             <p>Current measurement, future baseline and intervention result</p>
           </div>
         </div>
         <div className="heat-triple">
           <ComparisonCard
-            label="Current · 2024"
+            label="Current · 2026"
             value={`${result.currentHeat}°C`}
-            sub="Observed summer peak"
+            sub="2026 model baseline · official-data fit"
             density={0}
             type="heat"
           />
           <ComparisonCard
             label={`No intervention · ${year}`}
             value={`${result.baselineHeat}°C`}
-            sub={`−${climateCooling}°C from current`}
+            sub={`${baselineHeatDeltaLabel} from 2026 baseline`}
             density={0}
             type="heat"
           />
@@ -1106,16 +1106,16 @@ function HeatModelPanel({
           />
         </div>
         <div className="heat-scale detailed">
-          <span>25°C · cooler</span>
+          <span>Lower UHI</span>
           <i />
-          <span>45°C · hotter</span>
+          <span>Higher UHI</span>
         </div>
       </section>
       <div className="heat-metric-grid">
         <div>
           <small>Baseline change</small>
-          <strong>−{climateCooling}°C</strong>
-          <span>Climate-adjusted change by {year}</span>
+          <strong>{baselineHeatDeltaLabel}</strong>
+          <span>Empirical no-intervention projection change by {year}</span>
         </div>
         <div className="highlight">
           <small>Planting benefit</small>
@@ -1131,10 +1131,9 @@ function HeatModelPanel({
       <div className="heat-model-note">
         <Info size={15} />
         <p>
-          <strong>How it works:</strong> the heat model receives the baseline
-          temperature, target year and projected canopy coverage from Model B.
-          It compares the no-intervention baseline with the planting scenario;
-          values shown here are calibrated prototype outputs.
+          <strong>Data basis:</strong> UHI coefficients are fitted from official 2018 suburb UHI/tree-cover plus City of Melbourne 2018 building footprints.
+          Scenario predictions use the latest verified 2023 building form held constant and vary projected tree cover.
+          Future horizons are model predictions, not observations.
         </p>
       </div>
     </div>
@@ -1215,7 +1214,7 @@ function SavedPlans({
                       <strong>{plan.canopy}%</strong>canopy
                     </span>
                     <span>
-                      <strong>{plan.heat}°C</strong>surface temp.
+                      <strong>{plan.heat}°C</strong>UHI intensity
                     </span>
                     <span>
                       <strong>−{plan.cooling}°C</strong>cooling
@@ -1250,13 +1249,13 @@ function VisualComparison({
   result,
   area,
 }: {
-  year: 2035 | 2050;
+  year: 2030 | 2035 | 2040 | 2045 | 2050;
   result: ReturnType<typeof calculateScenario>;
   area: string;
 }) {
   const cards = [
     {
-      label: "Current · 2024",
+      label: "Current · 2026",
       value: `${result.current}% canopy`,
       pos: "left",
     },
@@ -1319,13 +1318,36 @@ export default function Home() {
   const [area, setArea] = useState("Carlton"),
     [speciesId, setSpeciesId] = useState("river-red-gum"),
     [count, setCount] = useState(50),
-    [year, setYear] = useState<2035 | 2050>(2050),
+    [year, setYear] = useState<2030 | 2035 | 2040 | 2045 | 2050>(2050),
     [running, setRunning] = useState(false);
   const [selectionMode, setSelectionMode] = useState<SelectionMode>("suburb"),
     [clueAreaId, setClueAreaId] = useState("city-north"),
     [streetId, setStreetId] = useState(streetCorridorsByArea.Carlton[0].id);
-  const [savedPlans, setSavedPlans] = useState<SavedScenario[]>([]),
-    [justSaved, setJustSaved] = useState(false);
+  const [savedPlans, setSavedPlans] = useState<SavedScenario[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const stored = window.localStorage.getItem("shade2050-saved-scenarios");
+      if (!stored) return [];
+      const parsed = JSON.parse(stored) as Array<
+        Omit<SavedScenario, "selectionMode"> & { selectionMode: string }
+      >;
+      return parsed.map((plan) => ({
+        ...plan,
+        selectionMode:
+          plan.selectionMode === "draw"
+            ? "suburb"
+            : (plan.selectionMode as SelectionMode),
+        streetId:
+          plan.streetId ?? streetCorridorsByArea[plan.area]?.[0]?.id ?? "",
+      }));
+    } catch {
+      return [];
+    }
+  });
+  const [justSaved, setJustSaved] = useState(false);
+  const [activeWorkspacePanel, setActiveWorkspacePanel] = useState<
+    "plan" | "impact"
+  >("plan");
   const [lastRun, setLastRun] = useState({
     area,
     speciesId,
@@ -1362,29 +1384,6 @@ export default function Home() {
     lastRun.selectionMode === "street" && lastStreet
       ? lastStreet.name
       : lastRun.area;
-  useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem("shade2050-saved-scenarios");
-      if (stored) {
-        const parsed = JSON.parse(stored) as Array<
-          SavedScenario & { selectionMode: string }
-        >;
-        setSavedPlans(
-          parsed.map((plan) => ({
-            ...plan,
-            selectionMode:
-              plan.selectionMode === "draw"
-                ? "suburb"
-                : (plan.selectionMode as SelectionMode),
-            streetId:
-              plan.streetId ?? streetCorridorsByArea[plan.area]?.[0]?.id ?? "",
-          })),
-        );
-      }
-    } catch {
-      /* Keep the planner usable when storage is unavailable. */
-    }
-  }, []);
   const persistPlans = (plans: SavedScenario[]) => {
     setSavedPlans(plans);
     try {
@@ -1448,6 +1447,7 @@ export default function Home() {
         areaScale,
       });
       setRunning(false);
+      setActiveWorkspacePanel("impact");
     }, 850);
   };
   const saveScenario = () => {
@@ -1500,33 +1500,65 @@ export default function Home() {
   const deleteScenario = (id: string) =>
     persistPlans(savedPlans.filter((plan) => plan.id !== id));
   return (
-    <main className="app-shell">
+    <main className="app-shell scenario-page">
       <SiteHeader active="scenario" />
       <div className="workspace" id="scenario">
-        <ScenarioControls
-          area={area}
-          setArea={chooseArea}
-          selectionMode={selectionMode}
-          setSelectionMode={chooseMode}
-          clueAreaId={clueAreaId}
-          setClueAreaId={chooseClueArea}
-          streetId={activeStreet?.id ?? streetId}
-          setStreetId={chooseStreet}
-          speciesId={speciesId}
-          setSpeciesId={setSpeciesId}
-          count={count}
-          setCount={setCount}
-          year={year}
-          setYear={setYear}
-          running={running}
-          run={run}
-        />
         <LiveMap
           area={area}
           count={count}
           selectionMode={selectionMode}
           streetId={activeStreet?.id ?? streetId}
+          year={year}
+          speciesName={species.find((item) => item.id === speciesId)?.name ?? "Selected species"}
         />
+        <div className="workspace-toolbar" aria-label="Scenario workflow">
+          <div className="workspace-heading">
+            <small>SHADE 2050 · PLANNING WORKSPACE</small>
+            <strong>{area}</strong>
+          </div>
+          <div className="workspace-mode-switch">
+            <button
+              className={activeWorkspacePanel === "plan" ? "active" : ""}
+              onClick={() => setActiveWorkspacePanel("plan")}
+            >
+              <Trees size={16} /> Plan scenario
+            </button>
+            <button
+              className={activeWorkspacePanel === "impact" ? "active" : ""}
+              onClick={() => setActiveWorkspacePanel("impact")}
+            >
+              <TrendingUp size={16} /> Review impact
+            </button>
+          </div>
+          <div className="workspace-progress">
+            <span className="complete"><i>1</i>Area</span><b />
+            <span className={count > 0 ? "complete" : ""}><i>2</i>Trees</span><b />
+            <span className={activeWorkspacePanel === "impact" ? "complete" : ""}><i>3</i>Impact</span>
+          </div>
+        </div>
+
+        <div className={`workspace-drawer plan-drawer ${activeWorkspacePanel === "plan" ? "active" : ""}`}>
+          <ScenarioControls
+            area={area}
+            setArea={chooseArea}
+            selectionMode={selectionMode}
+            setSelectionMode={chooseMode}
+            clueAreaId={clueAreaId}
+            setClueAreaId={chooseClueArea}
+            streetId={activeStreet?.id ?? streetId}
+            setStreetId={chooseStreet}
+            speciesId={speciesId}
+            setSpeciesId={setSpeciesId}
+            count={count}
+            setCount={setCount}
+            year={year}
+            setYear={setYear}
+            running={running}
+            run={run}
+          />
+        </div>
+
+        <div className={`workspace-drawer impact-drawer ${activeWorkspacePanel === "impact" ? "active" : ""}`}>
         <section className="results-panel" id="results">
           <div className="results-header">
             <div className="results-title">
@@ -1610,6 +1642,7 @@ export default function Home() {
                 Model B
               </TabsTrigger>
               <TabsTrigger value="details">Details</TabsTrigger>
+              <TabsTrigger value="street-view">Street view</TabsTrigger>
             </TabsList>
             <TabsContent value="overview">
               <OverviewPanel result={result} year={lastRun.year} />
@@ -1643,7 +1676,7 @@ export default function Home() {
                   <Clock3 />
                   <h3>Forecast horizon</h3>
                   <p>
-                    Annual recursive crown growth from 2026 to {lastRun.year}.
+                    Direct empirical crown-age projection from 2026 to {lastRun.year}; no 24-step autoregressive loop is used in the planner.
                   </p>
                 </div>
                 <div>
@@ -1669,22 +1702,27 @@ export default function Home() {
                 </div>
               </div>
             </TabsContent>
+            <TabsContent value="street-view">
+              <VisualComparison
+                year={lastRun.year}
+                result={result}
+                area={resultLabel}
+              />
+            </TabsContent>
           </Tabs>
+          <PlannerDecisionPanel
+            area={lastRun.area}
+            count={lastRun.count}
+            year={lastRun.year}
+            result={result}
+          />
+          <PlannerValidationPanel
+            area={lastRun.area}
+            result={result}
+          />
         </section>
+        </div>
       </div>
-      <VisualComparison
-        year={lastRun.year}
-        result={result}
-        area={resultLabel}
-      />
-      <footer>
-        <span>
-          <Leaf size={15} />
-          Shade 2050
-        </span>
-        <p>Decision support for a cooler, greener Melbourne.</p>
-        <span>Portfolio prototype · 2026</span>
-      </footer>
     </main>
   );
 }
