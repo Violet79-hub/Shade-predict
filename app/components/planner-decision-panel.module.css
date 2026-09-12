@@ -1,0 +1,68 @@
+.shell {
+  margin-top: 26px;
+  border: 1px solid #dce7e2;
+  border-radius: 22px;
+  padding: 24px;
+  background: #fbfdfb;
+  box-shadow: 0 18px 50px rgba(30, 63, 52, 0.08);
+}
+.heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: flex-start;
+  margin-bottom: 18px;
+}
+.heading h2 { margin: 3px 0 7px; font-size: 24px; color: #153b30; }
+.heading p { margin: 0; max-width: 760px; color: #63746f; }
+.eyebrow { font-size: 11px; letter-spacing: .14em; font-weight: 800; color: #207b5c; }
+.horizonBadge { border: 1px solid #c9ddd4; background: #edf6f2; color: #176248; padding: 8px 12px; border-radius: 999px; font-weight: 700; white-space: nowrap; }
+.scenarioGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.scenarioCard, .scenarioCardStrong { border: 1px solid #dce7e2; border-radius: 16px; padding: 16px; background: white; display: grid; gap: 6px; }
+.scenarioCardStrong { border-color: #69ad8f; background: #f2faf6; }
+.scenarioKicker { font-size: 11px; letter-spacing: .08em; font-weight: 800; color: #697b75; }
+.scenarioCard strong, .scenarioCardStrong strong { font-size: 24px; color: #173e32; }
+.scenarioCard b, .scenarioCardStrong b { font-size: 14px; color: #9a4d38; }
+.scenarioCard small, .scenarioCardStrong small { color: #6d7f79; line-height: 1.4; }
+.range { width: 100%; accent-color: #21845f; }
+.scenarioNote, .sourceNote, .maintenanceRow { display: flex; gap: 9px; align-items: flex-start; margin-top: 14px; color: #60736c; font-size: 13px; line-height: 1.5; }
+.costLayout { margin-top: 22px; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); gap: 18px; }
+.costControls, .costHero, .evidenceCard { border: 1px solid #dce7e2; border-radius: 18px; padding: 18px; background: white; }
+.sectionTitle { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; color: #1d6c50; }
+.sectionTitle div { display: grid; gap: 2px; }
+.sectionTitle strong { color: #173e32; }
+.sectionTitle span { font-size: 12px; color: #71817c; }
+.costControls label { display: grid; gap: 7px; margin-top: 14px; font-size: 12px; font-weight: 750; color: #465a53; }
+.costControls select, .budgetInput { width: 100%; border: 1px solid #ccdcd5; background: #fff; border-radius: 11px; min-height: 42px; padding: 0 11px; color: #243f36; }
+.costControls select { padding: 9px 11px; }
+.controlHelp { margin: 7px 0 0; color: #7a8984; font-size: 12px; }
+.budgetInput { display: flex; align-items: center; gap: 5px; }
+.budgetInput input { flex: 1; border: 0; outline: 0; min-width: 0; font: inherit; }
+.costHero { background: linear-gradient(145deg, #123f32, #1e6c51); color: white; display: flex; flex-direction: column; justify-content: center; }
+.costHero > span { font-size: 11px; font-weight: 800; letter-spacing: .1em; opacity: .74; }
+.costHero > strong { margin-top: 9px; font-size: clamp(26px, 3vw, 38px); line-height: 1.08; }
+.costHero > p { opacity: .78; margin: 8px 0 18px; }
+.budgetBar { height: 9px; border-radius: 999px; background: rgba(255,255,255,.17); overflow: hidden; }
+.budgetBar i { display: block; height: 100%; background: rgba(255,255,255,.82); border-radius: inherit; }
+.budgetSummary { margin-top: 12px; display: grid; gap: 7px; font-size: 12px; }
+.gap { color: #ffd4c6; }
+.headroom { color: #c4f2d8; }
+.metricGrid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; margin-top: 16px; }
+.metric { border: 1px solid #dce7e2; border-radius: 15px; padding: 15px; background: white; display: grid; gap: 5px; }
+.metric span { color: #6f7f7a; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
+.metric strong { color: #173e32; font-size: 20px; }
+.metric small { color: #7a8984; line-height: 1.35; }
+.evidenceGrid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px; margin-top: 18px; }
+.statusRow, .warningRow, .pendingRow { display: flex; gap: 8px; align-items: flex-start; padding: 9px 0; font-size: 13px; line-height: 1.4; border-top: 1px solid #edf2ef; }
+.statusRow { color: #315f4e; }
+.warningRow, .pendingRow { color: #875b34; }
+.sourceNote { background: #f2f5f3; border-radius: 12px; padding: 12px; }
+@media (max-width: 1000px) {
+  .scenarioGrid, .metricGrid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .costLayout, .evidenceGrid { grid-template-columns: 1fr; }
+}
+@media (max-width: 650px) {
+  .shell { padding: 16px; }
+  .heading { flex-direction: column; }
+  .scenarioGrid, .metricGrid { grid-template-columns: 1fr; }
+}
